@@ -53,7 +53,7 @@ StateGame.prototype.OnEnter = function () {
 	State.prototype.OnEnter.call( this );
 
 	this._conqueredMat1 = new THREE.MeshLambertMaterial( { color: 0xFF0000 } );
-	this._conqueredMat2 = new THREE.MeshLambertMaterial( { color: 0xDD0000 } );
+	this._conqueredMat2 = new THREE.MeshLambertMaterial( { color: 0xAA0000 } );
 
 	this.CreateMap();
 	this.CreatePlayer();
@@ -95,14 +95,14 @@ StateGame.prototype.CreateMap = function () {
 }
 
 StateGame.prototype.CreatePlayer = function () {
-	var geometry = new THREE.CubeGeometry( 1, 1, 1 );
+	var geometry = new THREE.CubeGeometry( 1, 3, 1 );
 	geometry.computeBoundingBox();
 	var material = new THREE.MeshLambertMaterial( { color: 0x00FF00 } );
 	var mesh = new THREE.Mesh( geometry, material );
 	mesh.position.set( 0, 1, 0 );
 	this._root.add( mesh );
 	this._player = mesh;
-	this._player._speed = 10;
+	this._player.position.set( MAP_WIDTH / 2, 1, MAP_HEIGHT / 2 );
 
 	camera = new THREE.PerspectiveCamera(
 		60, 
@@ -110,9 +110,8 @@ StateGame.prototype.CreatePlayer = function () {
 		0.1, 
 		1000);
 	this._player.add( camera );
-	var lookat = new THREE.Vector3( 0, -1, 0 );
-	camera.lookAt( lookat );
-	camera.position.set( 5, 30, 5 );
+	camera.position.set( 2, 4, 2 );
+	camera.lookAt( new THREE.Vector3( -1, 1, -1 ) );
 
 
 	var light = new THREE.PointLight( 0xFFFFFF );
@@ -151,8 +150,8 @@ StateGame.prototype.KeepPlayerPositionInMap = function () {
 }
 
 StateGame.prototype.ChangeColorFloor = function () {
-	var x = parseInt( this._player.position.x );
-	var y = parseInt( this._player.position.z );
+	var x = parseInt( this._player.position.x + 0.5 );
+	var y = parseInt( this._player.position.z + 0.5 );
 	console.log( x + ' ' + y );
 
 	var block = this._floorMap[y][x];
