@@ -110,8 +110,10 @@ StateGame.prototype.CreatePlayer = function () {
 		0.1, 
 		1000);
 	this._player.add( camera );
-	camera.position.set( 2, 4, 2 );
-	camera.lookAt( new THREE.Vector3( -1, 1, -1 ) );
+	// camera.position.set( 2, 4, 2 );
+	camera.position.set( 0, 20, 0 );
+	// camera.lookAt( new THREE.Vector3( -1, 1, -1 ) );
+	camera.lookAt( new THREE.Vector3( 0, -1, 0 ) );
 
 
 	var light = new THREE.PointLight( 0xFFFFFF );
@@ -121,17 +123,21 @@ StateGame.prototype.CreatePlayer = function () {
 
 StateGame.prototype.PlayerMoveByKeyboard = function (dt) {
 	if( keyboard.pressed('left') ) {
-		this._player.position.z += +10 * dt;
+		this._player.rotateY( 5 * dt );
 	}
 	if( keyboard.pressed('right') ) {
-		this._player.position.z += -10 * dt;
+		this._player.rotateY( -5 * dt );
 	}
-	if( keyboard.pressed('up') ) {
-		this._player.position.x += -10 * dt;
-	}
-	if( keyboard.pressed('down') ) {
-		this._player.position.x += +10 * dt;
-	}
+
+	// var deg = this._player.rotation.y * (180 / Math.PI);
+	console.log( this._player.rotation.y );
+
+	var cos = Math.cos( this._player.rotation.y );
+	var sin = Math.sin( this._player.rotation.y );
+	var dir = new THREE.Vector3( cos, 0, sin );
+	// console.log( dir );
+	dir.multiplyScalar( 3 * dt );
+	this._player.position.add( dir );
 }
 
 StateGame.prototype.KeepPlayerPositionInMap = function () {
@@ -152,7 +158,12 @@ StateGame.prototype.KeepPlayerPositionInMap = function () {
 StateGame.prototype.ChangeColorFloor = function () {
 	var x = parseInt( this._player.position.x + 0.5 );
 	var y = parseInt( this._player.position.z + 0.5 );
-	console.log( x + ' ' + y );
+	if( x >= MAP_WIDTH || x < 0 ) {
+		return;
+	}
+	if( y >= MAP_HEIGHT || y < 0 ) {
+		return;
+	}
 
 	var block = this._floorMap[y][x];
 	if( block.changed ) {
