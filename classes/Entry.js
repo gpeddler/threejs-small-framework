@@ -40,15 +40,11 @@ StateFirst.prototype.Update = function (dt) {
 }
 
 
+var MAP_WIDTH = 100;
+var MAP_HEIGHT = 100;
+
 function StateGame () {
 	this._stateName = "StateGame";
-
-	this._speedUpTimer = 0;
-
-	this._genTimer = 0;
-	this._player = undefined;
-
-	this._enemies = [];
 }
 
 StateGame.prototype = new State();
@@ -56,19 +52,57 @@ StateGame.prototype = new State();
 StateGame.prototype.OnEnter = function () {
 	State.prototype.OnEnter.call( this );
 
-	var geometry = new THREE.CubeGeometry( 2, 4, 4 );
+	this._conqueredMat1 = new THREE.MeshLambertMaterial( { color: 0xFF0000 } );
+	this._conqueredMat2 = new THREE.MeshLambertMaterial( { color: 0xDD0000 } );
+
+	this.CreateMap();
+	this.CreatePlayer();
+}
+
+StateGame.prototype.Update = function (dt) {
+	State.prototype.Update.call(this, dt);
+
+	this.PlayerMoveByKeyboard(dt);
+	this.KeepPlayerPositionInMap();
+	this.ChangeColorFloor();
+}
+
+StateGame.prototype.CreateMap = function () {
+	var mat1 = new THREE.MeshLambertMaterial( { color: 0x0000FF } );
+	var mat2 = new THREE.MeshLambertMaterial( { color: 0x0000DD } );
+
+	var geometry = new THREE.CubeGeometry( 1, 1, 1 );
+	var mesh = new THREE.Mesh( geometry );
+
+	this._floorMap = [];
+	for( var i = 0; i < MAP_HEIGHT; i ++ ) {
+		this._floorMap[i] = [];
+		for( var j = 0; j < MAP_WIDTH; j ++ ) {
+			var clone = mesh.clone();
+			if( (i + j) % 2 === 0 ) {
+				clone.material = mat1;
+			}
+			else {
+				clone.material = mat2;
+			}
+
+			clone.position.set( j, 0, i );
+			this._root.add( clone );
+			this._floorMap[i][j] = clone;
+			clone.changed = false;
+		}
+	}
+}
+
+StateGame.prototype.CreatePlayer = function () {
+	var geometry = new THREE.CubeGeometry( 1, 1, 1 );
+	geometry.computeBoundingBox();
 	var material = new THREE.MeshLambertMaterial( { color: 0x00FF00 } );
 	var mesh = new THREE.Mesh( geometry, material );
-	mesh.position.set( 0, 3, 0 );
+	mesh.position.set( 0, 1, 0 );
 	this._root.add( mesh );
 	this._player = mesh;
-	this._player.geometry.computeBoundingBox();
 	this._player._speed = 10;
-
-	var light = new THREE.PointLight( 0xFFFFFF );
-	light.position.set( 0, 20, 0 );
-	this._player.add( light );
-
 
 	camera = new THREE.PerspectiveCamera(
 		60, 
@@ -76,100 +110,65 @@ StateGame.prototype.OnEnter = function () {
 		0.1, 
 		1000);
 	this._player.add( camera );
-	console.log( camera );
-	var lookat = new THREE.Vector3( 0, 0, 1 );
+	var lookat = new THREE.Vector3( 0, -1, 0 );
 	camera.lookAt( lookat );
-	camera.position.set( 0, 4, 1 );
+	camera.position.set( 5, 30, 5 );
 
-	// create plane
-	var planeGeometry = new THREE.CubeGeometry( 1000, 1, 1000 );
-	var planeMaterial = new THREE.MeshLambertMaterial( { color: 0xaaaaaa } );
-	var planeMesh = new THREE.Mesh( planeGeometry, planeMaterial );
-	this._player.add( planeMesh );
-	planeMesh.position.y -= 5;
+
+	var light = new THREE.PointLight( 0xFFFFFF );
+	light.position.set( 0, 20, 0 );
+	this._player.add( light );
 }
 
-StateGame.prototype.Update = function (dt) {
-	State.prototype.Update.call(this, dt);
-
-	this._player.position.z += this._player._speed * dt;
-
-	this._speedUpTimer += dt;
-	if( this._speedUpTimer > 0.2 ) {
-		this._speedUpTimer = 0;
-		this._player._speed = Math.max( 40, this._player._speed * 1.001 );
-	}
-
-	this._genTimer += dt;
-	if( this._genTimer > 1.0 ) {
-		this._genTimer = 0;
-
-		this.CreateEnemy();
-	}
-
+StateGame.prototype.PlayerMoveByKeyboard = function (dt) {
 	if( keyboard.pressed('left') ) {
-		this._player.position.x += 30 * dt;
-		this._player.position.x = Math.min( 50, this._player.position.x );
+		this._player.position.z += +10 * dt;
 	}
 	if( keyboard.pressed('right') ) {
-		this._player.position.x += -30 * dt;
-		this._player.position.x = Math.max( -50, this._player.position.x );
+		this._player.position.z += -10 * dt;
 	}
-
-	this.RemoveFarEnemy();
-	this.CollisionCheck();
-}
-
-StateGame.prototype.CreateEnemy = function () {
-	for( var i = 1; i <= 10; i ++ ) {
-		var pos = this._player.position;
-		var geometry = new THREE.CubeGeometry( THREE.Math.randFloat( 5, 10 ), 30, 1 );
-		var material = new THREE.MeshLambertMaterial( { color: 0xFF0000 } );
-		var mesh = new THREE.Mesh( geometry, material );
-		mesh.position.set( pos.x + THREE.Math.randFloat( -20, 20 ), 15, pos.z + 200 );
-		this._root.add( mesh );
-
-		this._enemies.push( mesh );
-		geometry.computeBoundingBox();
+	if( keyboard.pressed('up') ) {
+		this._player.position.x += -10 * dt;
+	}
+	if( keyboard.pressed('down') ) {
+		this._player.position.x += +10 * dt;
 	}
 }
 
-StateGame.prototype.RemoveFarEnemy = function () {
-	var removeList = [];
-
-	var pz = this._player.position.z;
-	for (var i = this._enemies.length - 1; i >= 0; i--) {
-		var enemy = this._enemies[i];
-		var ez = enemy.position.z;
-		if( pz - ez > 100 ) {
-			removeList.push( enemy );
-		}
-	};
-
-	for (var i = removeList.length - 1; i >= 0; i--) {
-		var obj = removeList[i];
-		var index = this._enemies.indexOf( obj );
-		this._enemies.splice( index, index );
-	};
+StateGame.prototype.KeepPlayerPositionInMap = function () {
+	if( this._player.position.x < 0 ) {
+		this._player.position.x = 0;
+	}
+	if( this._player.position.x > MAP_WIDTH ) {
+		this._player.position.x = MAP_WIDTH;
+	}
+	if( this._player.position.z < 0 ) {
+		this._player.position.z = 0;
+	}
+	if( this._player.position.z > MAP_HEIGHT ) {
+		this._player.position.z = MAP_HEIGHT;
+	}
 }
 
-StateGame.prototype.CollisionCheck = function () {
-	var playerBoundingBox = this._player.geometry.boundingBox.clone();
-	playerBoundingBox.translate( this._player.position );
-	for (var i = this._enemies.length - 1; i >= 0; i--) {
-		var enemy = this._enemies[i];
-		var boundingBox = enemy.geometry.boundingBox.clone();
-		boundingBox.translate( enemy.position )
-		if( playerBoundingBox.isIntersectionBox( boundingBox ) ) {
-			this.GameOver();
-		}
-	};
-}
+StateGame.prototype.ChangeColorFloor = function () {
+	var x = parseInt( this._player.position.x );
+	var y = parseInt( this._player.position.z );
+	console.log( x + ' ' + y );
 
-StateGame.prototype.GameOver = function () {
-	// stateManager.SetState("StateFirst");
-}
+	var block = this._floorMap[y][x];
+	if( block.changed ) {
+		return;
+	}
 
+	if( (x + y) % 2 === 0 ) {
+		block.material = this._conqueredMat1;
+		block.changed = true;
+	}
+	else {
+		block.material = this._conqueredMat2;
+		block.changed = true;
+	}
+}
 
 
 
@@ -231,7 +230,7 @@ function Init () {
 
 	renderer = new THREE.WebGLRenderer();
 	renderer.setClearColor( 0xeeeeee, 1.0 ); // the default
-	renderer.setSize(window.innerWidth - 10, window.innerHeight);
+	renderer.setSize(window.innerWidth - 10, window.innerHeight - 20);
 	document.body.appendChild(renderer.domElement);
 
 
