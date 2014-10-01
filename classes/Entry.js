@@ -110,10 +110,9 @@ StateGame.prototype.CreatePlayer = function () {
 		0.1, 
 		1000);
 	this._player.add( camera );
-	// camera.position.set( 2, 4, 2 );
-	camera.position.set( 0, 20, 0 );
-	// camera.lookAt( new THREE.Vector3( -1, 1, -1 ) );
-	camera.lookAt( new THREE.Vector3( 0, -1, 0 ) );
+	camera.position.set( 0, 1, 0 );
+	camera.lookAt( new THREE.Vector3( -1, 0, 0 ) );
+	camera.rotateX( THREE.Math.degToRad( 10 ) );
 
 
 	var light = new THREE.PointLight( 0xFFFFFF );
@@ -129,13 +128,14 @@ StateGame.prototype.PlayerMoveByKeyboard = function (dt) {
 		this._player.rotateY( -5 * dt );
 	}
 
-	// var deg = this._player.rotation.y * (180 / Math.PI);
-	console.log( this._player.rotation.y );
+	var ry = this._player.rotation.y;
+	if( Math.abs( this._player.rotation.x ) === Math.PI ) {
+		ry = Math.PI - this._player.rotation.y;
+	}
 
-	var cos = Math.cos( this._player.rotation.y );
-	var sin = Math.sin( this._player.rotation.y );
-	var dir = new THREE.Vector3( cos, 0, sin );
-	// console.log( dir );
+	var cos = Math.cos( ry );
+	var sin = Math.sin( ry );
+	var dir = new THREE.Vector3( -cos, 0, sin );
 	dir.multiplyScalar( 3 * dt );
 	this._player.position.add( dir );
 }
